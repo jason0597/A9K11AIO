@@ -1,5 +1,11 @@
 .arm
 
+.global disable_interrupts
+.type disable_interrupts, %function
+disable_interrupts:
+    cpsid aif
+    clrex
+
 .global flush_dcache
 .type flush_dcache, %function
 flush_dcache:

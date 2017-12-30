@@ -71,7 +71,7 @@ static void patch_svcaccesstable(void) {
 }
 
 static Result patch_arm11_codeflow(void) {
-	__asm__ volatile ( "CPSID AIF\n" "CLREX" );
+	disable_interrupts();
 	
 	memcpy(FCRAM(0x3F00000), payload_buf, arm9_payload_size);
 	memcpy(FCRAM(0x3FFF000), payload_buf + 0xFF000, 0xE20);
@@ -91,7 +91,6 @@ static Result patch_arm11_codeflow(void) {
 }
 
 Result safehax(void) {
-
 	initsrv_allservices();
 	patch_svcaccesstable();
 
