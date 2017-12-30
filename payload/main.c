@@ -14,7 +14,7 @@
 #define PXI_EMPTY   (PXI_CNT11 & 0x100)
 
 #define LCDCFG_FILL *((volatile unsigned int *)0x10202204)
-#define DEBUG(c) LCDCFG_FILL = 0x01000000 | (c & 0xFFFFFF); //Instead of printing debug codes, we set the screen to a colour, because at this stage of the program we are at a level where printf is inaccesible
+#define DEBUG(c) LCDCFG_FILL = 0x01000000 | (c & 0xFFFFFF); //Instead of printing debug codes, we set the screen to a colour, because at this stage of the program printf is inaccesible
 
 #define PXI_SEND(cmd) { while (PXI_FULL) { ; } PXI_SEND11 = cmd; }
 

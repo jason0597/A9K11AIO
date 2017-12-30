@@ -1,5 +1,5 @@
 #include <3ds/types.h>
 
-void initsrv_allservices(void);
-void patch_svcaccesstable(void);
-Result patch_arm11_codeflow(void);
+//the "private" (static) functions are not included here, take a look at them yourself in the corresponding .c file
+
+Result safehax(void);

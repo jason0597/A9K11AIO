@@ -4,6 +4,8 @@
 #include <malloc.h>
 #include "asm.h"
 
+#include "../payload/arm11bin.h"
+
 #define FCRAM(x)   					 	(void *)(0xE0000000 + (x)) 
 #define AXIWRAM(x) 					 	(void *)(0xDFF00000 + (x)) 
 #define KMEMORY    					 	((u32 *)(AXIWRAM(0xF4000)))  
@@ -14,10 +16,10 @@
 #define SVC_ACL_SIZE                 	(0x10)
 #define KTHREAD_THREADPAGEPTR_OFFSET 	(0x8C)
 #define KSVCTHREADAREA_BEGIN_OFFSET  	(0xC8) 
- 
-extern void* payload_buf;       //see main.c
-extern int arm9_payload_size;   //see main.c
-extern bool is_new_3ds;         //see main.c
+
+extern bool is_new_3ds;      //see main.c
+int arm9_payload_size;        
+void* payload_buf;
 u32 g_original_pid = 0; 
 
 static void K_PatchPID(void) {
@@ -51,7 +53,7 @@ static void K_PatchACL(void) {
     memset(thread_page, 0xFF, SVC_ACL_SIZE);
 }
 
-void initsrv_allservices(void) {
+static void initsrv_allservices(void) {
     printf("Patching PID\n");
     svc_30(K_PatchPID);
 
@@ -63,12 +65,12 @@ void initsrv_allservices(void) {
     svc_30(K_RestorePID);
 }
 
-void patch_svcaccesstable(void) {
+static void patch_svcaccesstable(void) {
     printf("Patching SVC access table\n");
     svc_30(K_PatchACL);
 }
 
-Result patch_arm11_codeflow(void) {
+static Result patch_arm11_codeflow(void) {
 	__asm__ volatile ( "CPSID AIF\n" "CLREX" );
 	
 	memcpy(FCRAM(0x3F00000), payload_buf, arm9_payload_size);
@@ -89,4 +91,50 @@ Result patch_arm11_codeflow(void) {
 	}
 
 	return -1;
+}
+
+Result safehax(void) {
+	if (checkSvcGlobalBackdoor()) {
+		initsrv_allservices();
+		patch_svcaccesstable();
+	}
+	
+	if (pmInit()) { return -1; }
+	
+	printf("Allocating memory...\n");
+	payload_buf = memalign(0x1000, 0x100000);
+	if (!payload_buf) { return -2; }
+	
+	printf("Reading ARM9 payload...\n");
+	FILE* FileIn = fopen("sdmc:/arm9.bin", "rb");
+	if (!FileIn) { return -3; }
+	fseek(FileIn, 0, SEEK_END);
+	arm9_payload_size = ftell(FileIn);
+	rewind(FileIn);
+	if (arm9_payload_size > 0xFF000) { return -4; } 
+	fread(payload_buf, 1, arm9_payload_size, FileIn);
+	fclose(FileIn);
+
+	printf("Injecting ARM11 payload...\n");
+	if (arm11_payload_size > 0xE00) { return -5; }
+	for (int i = 0; i < arm11_payload_size; i++ /*one by one because we are dealing with bytes and we have a u8 array*/) {
+		*((u32*)(payload_buf + 0xFF000 + i)) = arm11bin[i];
+	}
+
+	/* Setup Framebuffers - https://github.com/mid-kid/CakeBrah/blob/master/source/brahma.c#L364 */
+	printf("Setting framebuffers...\n");
+	*((u32 *)(payload_buf + 0xFFE00)) = (u32)gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL) + 0xC000000;
+	*((u32 *)(payload_buf + 0xFFE04)) = (u32)gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, NULL, NULL) + 0xC000000;
+	*((u32 *)(payload_buf + 0xFFE08)) = (u32)gfxGetFramebuffer(GFX_BOTTOM, 0, NULL, NULL) + 0xC000000;
+	gfxSwapBuffers();
+		
+	printf("Patching ARM11...\n");
+	Result backdoor_res = checkSvcGlobalBackdoor() ? svcGlobalBackdoor(patch_arm11_codeflow) : svcBackdoor(patch_arm11_codeflow);
+	if (backdoor_res) { return -6; }
+	
+	/* Relaunch Firmware - This will clear the global flag preventing SAFE_MODE launch. */
+	printf("Reloading firmware...\n");
+    if (PM_LaunchFIRMSetParams(2, 0, NULL)) { return -7; }
+
+    return 0;
 }
