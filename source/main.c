@@ -5,7 +5,6 @@
 #include "udsploit.h"
 #include "hook_kernel.h"
 #include "safehax.h"
-#include "asm.h"
 
 extern void gfxSetFramebufferInfo(gfxScreen_t screen, u8 id);
 
@@ -97,6 +96,7 @@ exit:
 			panic_flag = false;		
 			break;	
 	}
+
 	if (panic_flag) {
 		consoleSelect(&bottomScreen);
 		printf("\x1b[26;3H\x1b[31;1m [!] %s\x1b[28;3H Press [START] to exit", errormsg);
@@ -117,6 +117,7 @@ exit:
 	}
 	
 	pmExit();
+	amExit();
 	romfsExit();
 	sdmcExit();
 	aptExit();

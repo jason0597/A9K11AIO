@@ -55,19 +55,19 @@ static void K_PatchACL(void) {
 
 static void initsrv_allservices(void) {
     printf("Patching PID\n");
-    svc_30(K_PatchPID);
+    svcMiniBackdoor(K_PatchPID);
 
     printf("Reiniting srv\n");
     srvExit();
     srvInit();
 
     printf("Restoring PID\n");
-    svc_30(K_RestorePID);
+    svcMiniBackdoor(K_RestorePID);
 }
 
 static void patch_svcaccesstable(void) {
     printf("Patching SVC access table\n");
-    svc_30(K_PatchACL);
+    svcMiniBackdoor(K_PatchACL);
 }
 
 static Result patch_arm11_codeflow(void) {
@@ -80,11 +80,8 @@ static Result patch_arm11_codeflow(void) {
 		if (KMEMORY[i] == 0xE12FFF14 && KMEMORY[i+2] == 0xE3A01000) { //hook arm11 launch
 			KMEMORY[i+3] = 0xE51FF004; //LDR PC, [PC,#-4]
 			KMEMORY[i+4] = 0x23FFF000;
-			__asm__ volatile ( //flush & invalidate the caches
-				"MOV R0, #0\n"
-				"MCR P15, 0, R0, C7, C10, 0\n"
-				"MCR P15, 0, R0, C7, C5, 0"
-			);
+			flush_dcache();
+            invalidate_icache();
 			return 0;
 			break;
 		}
@@ -94,11 +91,10 @@ static Result patch_arm11_codeflow(void) {
 }
 
 Result safehax(void) {
-	if (checkSvcGlobalBackdoor()) {
-		initsrv_allservices();
-		patch_svcaccesstable();
-	}
-	
+
+	initsrv_allservices();
+	patch_svcaccesstable();
+
 	if (pmInit()) { return -1; }
 	
 	printf("Allocating memory...\n");
@@ -129,7 +125,7 @@ Result safehax(void) {
 	gfxSwapBuffers();
 		
 	printf("Patching ARM11...\n");
-	Result backdoor_res = checkSvcGlobalBackdoor() ? svcGlobalBackdoor(patch_arm11_codeflow) : svcBackdoor(patch_arm11_codeflow);
+	Result backdoor_res = svcMiniBackdoor(patch_arm11_codeflow);
 	if (backdoor_res) { return -6; }
 	
 	/* Relaunch Firmware - This will clear the global flag preventing SAFE_MODE launch. */
