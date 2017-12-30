@@ -2,104 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include "udsploit.h"
+#include "hook_kernel.h"
+#include "safehax.h"
+#include "asm.h"
 
 #include "../payload/arm11bin.h"
-
-#define FCRAM(x)   					 	(void *)(0xE0000000 + (x)) 
-#define AXIWRAM(x) 					 	(void *)(0xDFF00000 + (x)) 
-#define KMEMORY    					 	((u32 *)(AXIWRAM(0xF4000))) 
-#define CURRENT_KTHREAD              	(*((u8**)0xFFFF9000))
-#define CURRENT_KPROCESS             	(*((u8**)0xFFFF9004))
-#define KPROCESS_ACL_START           	(is_new_3ds ? 0x90 : 0x88)
-#define KPROCESS_PID_OFFSET          	(is_new_3ds ? 0xBC : 0xB4)
-#define SVC_ACL_SIZE                 	(0x10)
-#define KTHREAD_THREADPAGEPTR_OFFSET 	(0x8C)
-#define KSVCTHREADAREA_BEGIN_OFFSET  	(0xC8)                                                       				
+                                                    				
 #define PANICIFTRUE(x,y) 				if (x) { panic_flag = true; errormsg = y; goto exit; }
 
-u32 svc_30(void *entry_fn, ...); // can pass up to two arguments to entry_fn(...)
-Result svcGlobalBackdoor(s32 (*callback)(void));
-bool checkSvcGlobalBackdoor(void);
 extern void gfxSetFramebufferInfo(gfxScreen_t screen, u8 id);
 
-u32 g_original_pid = 0;
 int arm9_payload_size = 0;
 bool is_new_3ds;
 void* payload_buf = NULL;
-
-Result hook_kernel();
-Result udsploit();
-
-void K_PatchPID(void) {
-    u8 *proc = CURRENT_KPROCESS;
-    u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
-
-    g_original_pid = *pidPtr;
-
-    // We're now PID zero, all we have to do is reinitialize the service manager in user-mode.
-    *pidPtr = 0;
-}
-
-void K_RestorePID(void) {
-    u8 *proc = CURRENT_KPROCESS;
-    u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
-
-    // Restore the original PID
-    *pidPtr = g_original_pid;
-}
-
-void K_PatchACL(void) {
-    // Patch the process first (for newly created threads).
-    u8 *proc = CURRENT_KPROCESS;
-    u8 *procacl = proc + KPROCESS_ACL_START;
-    memset(procacl, 0xFF, SVC_ACL_SIZE);
-
-    // Now patch the current thread.
-    u8 *thread = CURRENT_KTHREAD;
-    u8 *thread_pageend = *(u8**)(thread + KTHREAD_THREADPAGEPTR_OFFSET);
-    u8 *thread_page = thread_pageend - KSVCTHREADAREA_BEGIN_OFFSET;
-    memset(thread_page, 0xFF, SVC_ACL_SIZE);
-}
-
-void initsrv_allservices(void) {
-    printf("Patching PID\n");
-    svc_30(K_PatchPID);
-
-    printf("Reiniting srv\n");
-    srvExit();
-    srvInit();
-
-    printf("Restoring PID\n");
-    svc_30(K_RestorePID);
-}
-
-void patch_svcaccesstable(void) {
-    printf("Patching SVC access table\n");
-    svc_30(K_PatchACL);
-}
-
-Result patch_arm11_codeflow(void) {
-	__asm__ volatile ( "CPSID AIF\n" "CLREX" );
-	
-	memcpy(FCRAM(0x3F00000), payload_buf, arm9_payload_size);
-	memcpy(FCRAM(0x3FFF000), payload_buf + 0xFF000, 0xE20);
-	
-	for (int i = 0; i < 0x2000/4; i++) {
-		if (KMEMORY[i] == 0xE12FFF14 && KMEMORY[i+2] == 0xE3A01000) { //hook arm11 launch
-			KMEMORY[i+3] = 0xE51FF004; //LDR PC, [PC,#-4]
-			KMEMORY[i+4] = 0x23FFF000;
-			__asm__ volatile ( //flush & invalidate the caches
-				"MOV R0, #0\n"
-				"MCR P15, 0, R0, C7, C10, 0\n"
-				"MCR P15, 0, R0, C7, C5, 0"
-			);
-			return 0;
-			break;
-		}
-	}
-
-	return -1;
-}
 
 int main() {
 	//===============================================
@@ -119,6 +35,7 @@ int main() {
 	romfsInit();
 	amInit();
 
+	/* https://github.com/saibotu/safehax/commit/1255e2b416551b96aff8ddac48ba8725773ff905 */
 	u64 titleID = is_new_3ds ? 0x0004013820000002 : 0x0004013800000002;
 	AM_TitleEntry entry;
 	PANICIFTRUE(!R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_NAND, 1, &titleID, &entry)), "FAILED TO GET NATIVE_FIRM TITLE")

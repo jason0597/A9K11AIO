@@ -2,9 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <malloc.h>
-
-Result svcMiniBackdoor(void* target);
-void invalidate_icache();
+#include "asm.h"
 
 // bypass gsp address checks
 static void gspSetTextureCopy(u32 in_pa, u32 out_pa, u32 size, u32 in_dim, u32 out_dim, u32 flags) {
