@@ -1,0 +1,9 @@
+*.elf
+*.smdh
+*.3dsx
+.vscode
+.vs
+build/
+payload/arm11.bin
+payload/arm11bin.h
+bin2text/bin2text
