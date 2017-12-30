@@ -3,7 +3,10 @@
 *.3dsx
 .vscode
 .vs
+maker.sh
 build/
 payload/arm11.bin
 payload/arm11bin.h
+payload/*.o
+payload/*.out
 bin2text/bin2text

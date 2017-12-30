@@ -13,19 +13,11 @@ include $(DEVKITARM)/3ds_rules
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
 # SOURCES is a list of directories containing source code
-# DATA is a list of directories containing data files
 # INCLUDES is a list of directories containing header files
 #
-# NO_SMDH: if set to anything, no SMDH file is generated.
-# ROMFS is the directory which contains the RomFS, relative to the Makefile (Optional)
 # APP_TITLE is the name of the app stored in the SMDH file (Optional)
 # APP_DESCRIPTION is the description of the app stored in the SMDH file (Optional)
 # APP_AUTHOR is the author of the app stored in the SMDH file (Optional)
-# ICON is the filename of the icon (.png), relative to the project folder.
-#   If not set, it attempts to use one of the following (in this order):
-#     - <Project name>.png
-#     - icon.png
-#     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
 
 TARGET			:=	$(notdir $(CURDIR))
@@ -33,6 +25,7 @@ BUILD			:=	build
 SOURCES			:=	source
 INCLUDES		:=	include
 
+APP_ICON  		:=  $(CTRULIB)/default_icon.png
 APP_TITLE		:=	A9K11AIO
 APP_DESCRIPTION	:=	ARM9 code execution
 APP_AUTHOR		:=	jason0597
@@ -46,6 +39,20 @@ CFLAGS	:=	-g -Wall -O2 -mword-relocations -fomit-frame-pointer -ffunction-sectio
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS	:=  -lctru -lm
+
+#---------------------------------------------------------------------------------
+# detected OS, required for deciding which bin2text to use
+#---------------------------------------------------------------------------------
+
+ifeq ($(OS),Windows_NT)
+	BIN2TEXT := bin2text/bin2text_windows.exe 
+else
+	ifeq ($(shell uname -s), Linux)
+		BIN2TEXT := ./bin2text/bin2text_linux
+	else
+		BIN2TEXT := ./bin2text/bin2text_mac 
+	endif
+endif
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -72,7 +79,7 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 #---------------------------------------------------------------------------------
 # Use CC for linking standard C projects
 #---------------------------------------------------------------------------------
-	export LD	:=	$(CC)
+export LD	:=	$(CC)
 #---------------------------------------------------------------------------------
 
 export OFILES	:=	$(CFILES:.c=.o) $(SFILES:.s=.o)
@@ -82,21 +89,18 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 .PHONY: $(BUILD) payload clean all
 
 #---------------------------------------------------------------------------------
-all: payload $(BUILD)
 
-payload:
-	@cd payload && make
-
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@g++ -std=c++11 bin2text/bin2text.cpp -o bin2text/bin2text
-	@./bin2text/bin2text payload/arm11.bin payload/arm11bin.h 25
+all:
+	@cd payload && $(MAKE) 
+	@mkdir -p $(BUILD)
+	@$(BIN2TEXT) payload/arm11.bin payload/arm11bin.h 25
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
+
 clean:
 	@echo clean ...
-	@rm -rf $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf  bin2text/bin2text payload/arm11.bin payload/arm11bin.h 
+	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf payload/arm11.bin payload/arm11bin.h payload/a.out payload/_start.o payload/main.o
 
 #---------------------------------------------------------------------------------
 else
@@ -106,6 +110,7 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
+
 ifeq ($(strip $(NO_SMDH)),)
 $(OUTPUT).3dsx	:	$(OUTPUT).elf $(OUTPUT).smdh
 else

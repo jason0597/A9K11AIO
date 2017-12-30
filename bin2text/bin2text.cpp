@@ -4,6 +4,7 @@
 
 	with this program you can turn a binary file into a hex array to be used in c/c++ programs
 	note: this only parses the raw bytes, it does not do the preliminary stuff like braces or the array declaration and such
+	EDIT: alright i did put the braces here to make compiling easier for A9K11AIO
 	that is to be done manually, as it varies from case to case
 
 	compile this with g++, and then run it from the command line	

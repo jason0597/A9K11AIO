@@ -59,4 +59,3 @@ checkSvcGlobalBackdoor:
         cpsid aif
         mov r3, #1
         bx lr
-        

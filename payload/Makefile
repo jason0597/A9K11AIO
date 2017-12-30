@@ -9,4 +9,3 @@ all:
 	$(CC) -g *.s -c -march=armv6z
 	$(CC) -T 3ds.ld *.o
 	$(OC) --set-section-flags .bss=alloc,load,contents -O binary a.out arm11.bin
-	rm *.out *.o

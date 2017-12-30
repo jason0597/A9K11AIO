@@ -97,7 +97,7 @@ Result patch_arm11_codeflow(void) {
 			break;
 		}
 	}
-	//If the if statement above fails, we just return -1, no need to worry about cache invalidation since it doesn't matter anymore
+
 	return -1;
 }
 
@@ -117,6 +117,12 @@ int main() {
 	fsInit();	
 	sdmcInit();
 	romfsInit();
+	amInit();
+
+	u64 titleID = is_new_3ds ? 0x0004013820000002 : 0x0004013800000002;
+	AM_TitleEntry entry;
+	PANICIFTRUE(!R_SUCCEEDED(AM_GetTitleInfo(MEDIATYPE_NAND, 1, &titleID, &entry)), "FAILED TO GET NATIVE_FIRM TITLE")
+ 	PANICIFTRUE(entry.version > 27476, "UNSUPPORTED FIRMWARE!") // 11.4^
 
 	//===============================================
 	//===================UDSPLOIT====================
@@ -126,7 +132,7 @@ int main() {
 	Result ret = 0;	
 	ret = udsploit();
 	printf("%08X\n", (unsigned int)ret);
-	PANICIFTRUE(ret, "UDSPLOIT() FAILED!")
+	PANICIFTRUE(ret, "UDSPLOIT FAILED!")
 	printf("udsploit success\n");
 	ret = hook_kernel();
 	PANICIFTRUE(ret, "KERNEL HOOK FAILED!")
@@ -137,8 +143,6 @@ int main() {
 	//===============================================
 
 	consoleSelect(&bottomScreen);
-
-	PANICIFTRUE((osGetKernelVersion() > SYSTEM_VERSION(2, 53, 0)), "UNSUPPORTED FIRMWARE!")
 	
 	if (checkSvcGlobalBackdoor()) {
 		initsrv_allservices();
