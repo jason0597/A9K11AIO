@@ -3,13 +3,10 @@
 	bin2text, written in C++
 
 	with this program you can turn a binary file into a hex array to be used in c/c++ programs
-	note: this only parses the raw bytes, it does not do the preliminary stuff like braces or the array declaration and such
-	EDIT: alright i did put the braces here to make compiling easier for A9K11AIO
-	that is to be done manually, as it varies from case to case
 
 	compile this with g++, and then run it from the command line	
 	usage is as follows:
-	./a.out <PATH_TO_BINARY> <PATH_TO_TEXTFILE> <NUMBER_OF_BYTES_PER_ROW_PRINTED>
+	./a.out <PATH_TO_BINARY> <PATH_TO_TEXTFILE> <NUMBER_OF_BYTES_PER_ROW_PRINTED> <NAME_OF_ARRAY_AND_ARRAY_SIZE_INT>
 
 */
 
@@ -34,8 +31,8 @@ bool IntTryParse(string str, int *int_out)
  
 int main(int argc, char **argv)
 {
-    if (argc != 4) { 
-        cout << ((argc > 4) ? "Too many arguments! Exiting...\n" : "Not enough arguments! Exiting...\n");
+    if (argc != 5) { 
+        cout << ((argc > 5) ? "Too many arguments! Exiting...\n" : "Not enough arguments! Exiting...\n");
         return 0;
     }
 
@@ -63,7 +60,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	FileOut << "u8 arm11bin[] = {" << endl;
+	FileOut << "u8 " << argv[4] << "[] = {" << endl;
 	for (int i = 0; i < filesize; i++) {
 		int num_to_print = int(static_cast<unsigned char>(ReadFile[i]));
 		if (num_to_print < 16) {
@@ -77,8 +74,7 @@ int main(int argc, char **argv)
 		}
 	}
 	FileOut << endl << "};" << endl;
-	FileOut << "int arm11_payload_size = " << hex << "0x" << filesize << ";";
-
+	FileOut << "int " << argv[4] << "_size" << " = " << hex << "0x" << filesize << ";";
 	FileOut.close();
 
 	cout << "Done!\n";	

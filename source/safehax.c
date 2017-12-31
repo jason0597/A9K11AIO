@@ -6,6 +6,22 @@
 
 #include "../payload/arm11bin.h"
 
+//i know ifdefs are bad practice but this is what i could come up with for the bundled arm9 payload
+//if arm9bin.h exists (the ARM9BIN_EXISTS macro is defined by the makefile if it exists), include it, and set the bundled_arm9_payload_exists equal to true
+//else, declare the arm9_payload_size (because if arm9bin.h was included it would declare this for us, but if arm9bin.h doesn't exist we have to declare it ourselves)
+//and set the bundled_arm9_payload_exists flag equal to false
+
+#define ARM9BIN_EXISTS
+
+#ifdef ARM9BIN_EXISTS
+#include "../arm9/arm9bin.h"
+bool bundled_arm9_payload_exists = true;
+#else
+u8 *arm9_payload; //this is just a dummy variable so that compilation can go smooth in line 167, it won't get used because it will never go through the if statement at line 161
+int arm9_payload_size;  
+bool bundled_arm9_payload_exists = false;
+#endif
+
 #define FCRAM(x)   					 	(void *)(0xE0000000 + (x)) 
 #define AXIWRAM(x) 					 	(void *)(0xDFF00000 + (x)) 
 #define KMEMORY    					 	((u32 *)(AXIWRAM(0xF4000)))  
@@ -18,7 +34,6 @@
 #define KSVCTHREADAREA_BEGIN_OFFSET  	(0xC8) 
 
 extern bool is_new_3ds;      //see main.c
-int arm9_payload_size;        
 void* payload_buf;
 u32 g_original_pid = 0; 
 
@@ -99,21 +114,70 @@ Result safehax(void) {
 	printf("Allocating memory...\n");
 	payload_buf = memalign(0x1000, 0x100000);
 	if (!payload_buf) { return -2; }
-	
+
+	//==========================================
+	//ARM9 payload reading
+	//
+	//first try to read safehaxpayload.bin
+	//	if opening fails, and there is no bundled arm9 payload, return
+	//	else, goto arm9_payload_fallback
+	//then, check the file size of safehaxpayload.bin is bigger than 0xFF000
+	//	if it's bigger than 0xFF000, and there is no bundled arm9 payload, return
+	//	else, goto arm9_payload_fallback
+	//==========================================
+
+	bool safehaxpayload_reading_success = false;
 	printf("Reading ARM9 payload...\n");
-	FILE* FileIn = fopen("sdmc:/arm9.bin", "rb");
-	if (!FileIn) { return -3; }
+	printf("Opening safehaxpayload.bin...\n");
+	FILE* FileIn = fopen("sdmc:/safehaxpayload.bin", "rb");
+	if (!FileIn) { 
+		if (bundled_arm9_payload_exists) { 
+			printf("Failed to open safehaxpayload.bin!\nFalling back to bundled payload...\n");
+			goto arm9_payload_fallback; 
+		}
+		else { 
+			printf("Failed to open safehaxpayload.bin!\nNo bundled payload to fallback on!\nExiting...\n");
+			return -3; 
+		}
+	}
 	fseek(FileIn, 0, SEEK_END);
-	arm9_payload_size = ftell(FileIn);
+	if (ftell(FileIn) > 0xFF000) {
+		fclose(FileIn);
+		if (bundled_arm9_payload_exists) { 
+			printf("safehaxpayload.bin too big!\nFalling back to bundled payload...\n");
+			goto arm9_payload_fallback; 
+		}
+		else { 
+			printf("safehaxpayload.bin too big!\nNo bundled payload to fallback on!\nExiting...\n");
+			return -4; 
+		}
+	}
+	arm9_payload_size = ftell(FileIn); 
 	rewind(FileIn);
-	if (arm9_payload_size > 0xFF000) { return -4; } 
 	fread(payload_buf, 1, arm9_payload_size, FileIn);
 	fclose(FileIn);
+	safehaxpayload_reading_success = true;
+
+arm9_payload_fallback:
+
+	if (!safehaxpayload_reading_success && bundled_arm9_payload_exists) {
+		if (arm9_payload_size > 0xFF000) {
+			printf("Bundled payload too big!\nExiting...");
+			return -8;
+		}
+		for (int i = 0; i < arm9_payload_size; i++ /*one by one because we are dealing with bytes and we have a u8 array*/) {
+			*((u32*)(payload_buf + i)) = arm9_payload[i];
+		}
+	}
+
+	//==========================================
+	//==========================================
+	//==========================================
 
 	printf("Injecting ARM11 payload...\n");
 	if (arm11_payload_size > 0xE00) { return -5; }
 	for (int i = 0; i < arm11_payload_size; i++ /*one by one because we are dealing with bytes and we have a u8 array*/) {
-		*((u32*)(payload_buf + 0xFF000 + i)) = arm11bin[i];
+		*((u32*)(payload_buf + 0xFF000 + i)) = arm11_payload[i];
 	}
 
 	/* Setup Framebuffers - https://github.com/mid-kid/CakeBrah/blob/master/source/brahma.c#L364 */

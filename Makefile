@@ -45,13 +45,24 @@ LIBS	:=  -lctru -lm
 #---------------------------------------------------------------------------------
 
 ifeq ($(OS),Windows_NT)
-	BIN2TEXT := bin2text/bin2text_windows.exe 
+BIN2TEXT := bin2text/bin2text_windows.exe 
 else
-	ifeq ($(shell uname -s), Linux)
-		BIN2TEXT := ./bin2text/bin2text_linux
-	else
-		BIN2TEXT := ./bin2text/bin2text_mac 
-	endif
+ifeq ($(shell uname -s), Linux)
+BIN2TEXT := ./bin2text/bin2text_linux
+else
+BIN2TEXT := ./bin2text/bin2text_mac 
+endif
+endif
+
+#---------------------------------------------------------------------------------
+# check if bundled arm9.bin exists in arm9 folder
+#---------------------------------------------------------------------------------
+
+ifneq ("$(wildcard arm9/arm9.bin)","")
+ARM9BIN_EXISTS = 1
+CFLAGS += -DARM9BIN_EXISTS=1
+else
+ARM9BIN_EXISTS = 0
 endif
 
 #---------------------------------------------------------------------------------
@@ -91,16 +102,19 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 #---------------------------------------------------------------------------------
 
 all:
-	@cd payload && $(MAKE) 
-	@mkdir -p $(BUILD)
-	@$(BIN2TEXT) payload/arm11.bin payload/arm11bin.h 25
+	@cd payload && $(MAKE)
+	@mkdir -p $(BUILD) 
+	@$(BIN2TEXT) payload/arm11.bin payload/arm11bin.h 25 arm11_payload
+ifeq ($(ARM9BIN_EXISTS), 1)
+	@$(BIN2TEXT) arm9/arm9.bin arm9/arm9bin.h 25 arm9_payload
+endif
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 
 clean:
 	@echo clean ...
-	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf payload/arm11.bin payload/arm11bin.h payload/a.out payload/_start.o payload/main.o
+	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf payload/arm11.bin payload/arm11bin.h arm9/arm9bin.h payload/a.out payload/*.o
 
 #---------------------------------------------------------------------------------
 else

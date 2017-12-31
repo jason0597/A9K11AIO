@@ -75,10 +75,13 @@ exit:
 			errormsg = "FAILED TO ALLOCATE MEMORY!";
 			break;
 		case -3:
-			errormsg = "FAILED TO OPEN ARM9.BIN!";
+			errormsg = "FAILED TO OPEN SAFEHAXPAYLOAD!";
 			break;
 		case -4:
-			errormsg = "ARM9 PAYLOAD TOO BIG!";
+			errormsg = "SAFEHAXPAYLOAD! PAYLOAD TOO BIG!";
+			break;
+		case -8:
+			errormsg = "BUNDLED ARM9 PAYLOAD TOO BIG!";
 			break;
 		case -5:
 			errormsg = "ARM11 PAYLOAD TOO BIG!";
