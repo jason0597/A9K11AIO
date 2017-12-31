@@ -1,7 +1,5 @@
 #include <3ds.h>
 #include <stdio.h>
-#include <string.h>
-#include <malloc.h>
 #include "udsploit.h"
 #include "hook_kernel.h"
 #include "safehax.h"

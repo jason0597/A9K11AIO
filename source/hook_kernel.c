@@ -15,8 +15,7 @@ static void gspSetTextureCopy(u32 in_pa, u32 out_pa, u32 size, u32 in_dim, u32 o
 }
 
 static void initial_kernel_function(u32 garbage) {
-	__asm__ volatile("cpsid aif");
-
+	disable_interrupts();
 	invalidate_icache();
 }
 
