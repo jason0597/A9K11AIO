@@ -10,15 +10,12 @@
 //if arm9bin.h exists (the ARM9BIN_EXISTS macro is defined by the makefile if it exists), include it, and set the bundled_arm9_payload_exists equal to true
 //else, declare the arm9_payload_size (because if arm9bin.h was included it would declare this for us, but if arm9bin.h doesn't exist we have to declare it ourselves)
 //and set the bundled_arm9_payload_exists flag equal to false
-
-#define ARM9BIN_EXISTS
-
 #ifdef ARM9BIN_EXISTS
 #include "../arm9/arm9bin.h"
 bool bundled_arm9_payload_exists = true;
 #else
-u8 *arm9_payload; //this is just a dummy variable so that compilation can go smooth in line 167, it won't get used because it will never go through the if statement at line 161
-int arm9_payload_size;  
+u8 *arm9_payload; //this is just a dummy variable so that compilation can go smooth in line 166, it won't get used because it will never go through the if statement at line 160
+int arm9_payload_size;
 bool bundled_arm9_payload_exists = false;
 #endif
 
@@ -35,68 +32,68 @@ bool bundled_arm9_payload_exists = false;
 
 extern bool is_new_3ds;      //see main.c
 void* payload_buf;
-u32 g_original_pid = 0; 
+u32 g_original_pid = 0;
 
 static void K_PatchPID(void) {
-    u8 *proc = CURRENT_KPROCESS;
-    u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
+	u8 *proc = CURRENT_KPROCESS;
+	u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
 
-    g_original_pid = *pidPtr;
+	g_original_pid = *pidPtr;
 
-    // We're now PID zero, all we have to do is reinitialize the service manager in user-mode.
-    *pidPtr = 0;
+	// We're now PID zero, all we have to do is reinitialize the service manager in user-mode.
+	*pidPtr = 0;
 }
 
 static void K_RestorePID(void) {
-    u8 *proc = CURRENT_KPROCESS;
-    u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
+	u8 *proc = CURRENT_KPROCESS;
+	u32 *pidPtr = (u32*)(proc + KPROCESS_PID_OFFSET);
 
-    // Restore the original PID
-    *pidPtr = g_original_pid;
+	// Restore the original PID
+	*pidPtr = g_original_pid;
 }
 
 static void K_PatchACL(void) {
-    // Patch the process first (for newly created threads).
-    u8 *proc = CURRENT_KPROCESS;
-    u8 *procacl = proc + KPROCESS_ACL_START;
-    memset(procacl, 0xFF, SVC_ACL_SIZE);
+	// Patch the process first (for newly created threads).
+	u8 *proc = CURRENT_KPROCESS;
+	u8 *procacl = proc + KPROCESS_ACL_START;
+	memset(procacl, 0xFF, SVC_ACL_SIZE);
 
-    // Now patch the current thread.
-    u8 *thread = CURRENT_KTHREAD;
-    u8 *thread_pageend = *(u8**)(thread + KTHREAD_THREADPAGEPTR_OFFSET);
-    u8 *thread_page = thread_pageend - KSVCTHREADAREA_BEGIN_OFFSET;
-    memset(thread_page, 0xFF, SVC_ACL_SIZE);
+	// Now patch the current thread.
+	u8 *thread = CURRENT_KTHREAD;
+	u8 *thread_pageend = *(u8**)(thread + KTHREAD_THREADPAGEPTR_OFFSET);
+	u8 *thread_page = thread_pageend - KSVCTHREADAREA_BEGIN_OFFSET;
+	memset(thread_page, 0xFF, SVC_ACL_SIZE);
 }
 
 static void initsrv_allservices(void) {
-    printf("Patching PID\n");
-    svcMiniBackdoor(K_PatchPID);
+	printf("Patching PID\n");
+	svcMiniBackdoor(K_PatchPID);
 
-    printf("Reiniting srv\n");
-    srvExit();
-    srvInit();
+	printf("Reiniting srv\n");
+	srvExit();
+	srvInit();
 
-    printf("Restoring PID\n");
-    svcMiniBackdoor(K_RestorePID);
+	printf("Restoring PID\n");
+	svcMiniBackdoor(K_RestorePID);
 }
 
 static void patch_svcaccesstable(void) {
-    printf("Patching SVC access table\n");
-    svcMiniBackdoor(K_PatchACL);
+	printf("Patching SVC access table\n");
+	svcMiniBackdoor(K_PatchACL);
 }
 
 static Result patch_arm11_codeflow(void) {
 	disable_interrupts();
-	
+
 	memcpy(FCRAM(0x3F00000), payload_buf, arm9_payload_size);
 	memcpy(FCRAM(0x3FFF000), payload_buf + 0xFF000, 0xE20);
-	
-	for (int i = 0; i < 0x2000/4; i++) {
-		if (KMEMORY[i] == 0xE12FFF14 && KMEMORY[i+2] == 0xE3A01000) { //hook arm11 launch
-			KMEMORY[i+3] = 0xE51FF004; //LDR PC, [PC,#-4]
-			KMEMORY[i+4] = 0x23FFF000;
+
+	for (int i = 0; i < 0x2000 / 4; i++) {
+		if (KMEMORY[i] == 0xE12FFF14 && KMEMORY[i + 2] == 0xE3A01000) { //hook arm11 launch
+			KMEMORY[i + 3] = 0xE51FF004; //LDR PC, [PC,#-4]
+			KMEMORY[i + 4] = 0x23FFF000;
 			flush_dcache();
-            invalidate_icache();
+			invalidate_icache();
 			return 0;
 			break;
 		}
@@ -110,7 +107,7 @@ Result safehax(void) {
 	patch_svcaccesstable();
 
 	if (pmInit()) { return -1; }
-	
+
 	printf("Allocating memory...\n");
 	payload_buf = memalign(0x1000, 0x100000);
 	if (!payload_buf) { return -2; }
@@ -130,29 +127,29 @@ Result safehax(void) {
 	printf("Reading ARM9 payload...\n");
 	printf("Opening safehaxpayload.bin...\n");
 	FILE* FileIn = fopen("sdmc:/safehaxpayload.bin", "rb");
-	if (!FileIn) { 
-		if (bundled_arm9_payload_exists) { 
+	if (!FileIn) {
+		if (bundled_arm9_payload_exists) {
 			printf("Failed to open safehaxpayload.bin!\nFalling back to bundled payload...\n");
-			goto arm9_payload_fallback; 
+			goto arm9_payload_fallback;
 		}
-		else { 
+		else {
 			printf("Failed to open safehaxpayload.bin!\nNo bundled payload to fallback on!\nExiting...\n");
-			return -3; 
+			return -3;
 		}
 	}
 	fseek(FileIn, 0, SEEK_END);
 	if (ftell(FileIn) > 0xFF000) {
 		fclose(FileIn);
-		if (bundled_arm9_payload_exists) { 
+		if (bundled_arm9_payload_exists) {
 			printf("safehaxpayload.bin too big!\nFalling back to bundled payload...\n");
-			goto arm9_payload_fallback; 
+			goto arm9_payload_fallback;
 		}
-		else { 
+		else {
 			printf("safehaxpayload.bin too big!\nNo bundled payload to fallback on!\nExiting...\n");
-			return -4; 
+			return -4;
 		}
 	}
-	arm9_payload_size = ftell(FileIn); 
+	arm9_payload_size = ftell(FileIn);
 	rewind(FileIn);
 	fread(payload_buf, 1, arm9_payload_size, FileIn);
 	fclose(FileIn);
@@ -186,14 +183,14 @@ arm9_payload_fallback:
 	*((u32 *)(payload_buf + 0xFFE04)) = (u32)gfxGetFramebuffer(GFX_TOP, GFX_RIGHT, NULL, NULL) + 0xC000000;
 	*((u32 *)(payload_buf + 0xFFE08)) = (u32)gfxGetFramebuffer(GFX_BOTTOM, 0, NULL, NULL) + 0xC000000;
 	gfxSwapBuffers();
-		
+
 	printf("Patching ARM11...\n");
 	Result backdoor_res = svcMiniBackdoor(patch_arm11_codeflow);
 	if (backdoor_res) { return -6; }
-	
+
 	/* Relaunch Firmware - This will clear the global flag preventing SAFE_MODE launch. */
 	printf("Reloading firmware...\n");
-    if (PM_LaunchFIRMSetParams(2, 0, NULL)) { return -7; }
+	if (PM_LaunchFIRMSetParams(2, 0, NULL)) { return -7; }
 
-    return 0;
+	return 0;
 }

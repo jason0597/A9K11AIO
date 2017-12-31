@@ -15,14 +15,14 @@ int main() {
 
 	Result hax_res;
 	bool panic_flag = true; //by default it is true, but if everything goes well it it set to false
-	char* errormsg; 
+	char* errormsg;
 	PrintConsole topScreen, bottomScreen;
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &topScreen);
 	consoleInit(GFX_BOTTOM, &bottomScreen);
 	aptInit();
 	APT_CheckNew3DS(&is_new_3ds);
-	fsInit();	
+	fsInit();
 	sdmcInit();
 	romfsInit();
 	amInit();
@@ -56,56 +56,56 @@ int main() {
 
 exit:
 	switch (hax_res) {
-		case 1:
-			errormsg = "FAILED TO GET NATIVE_FIRM TITLE";
-			break;
-		case 2:
-			errormsg = "UNSUPPORTED FIRMWARE!";
-			break;
-		case 3:
-			errormsg = "UDSPLOIT FAILED!";
-			break;
-		case 4:
-			errormsg = "KERNEL HOOK FAILED!";
-			break;
-		case -1:
-			errormsg = "PM INIT FAILED!";
-			break;
-		case -2:
-			errormsg = "FAILED TO ALLOCATE MEMORY!";
-			break;
-		case -3:
-			errormsg = "FAILED TO OPEN SAFEHAXPAYLOAD!";
-			break;
-		case -4:
-			errormsg = "SAFEHAXPAYLOAD! PAYLOAD TOO BIG!";
-			break;
-		case -8:
-			errormsg = "BUNDLED ARM9 PAYLOAD TOO BIG!";
-			break;
-		case -5:
-			errormsg = "ARM11 PAYLOAD TOO BIG!";
-			break;
-		case -6:
-			errormsg = "FAILED TO PATCH THE ARM11 KERNEL!";
-			break;
-		case -7:
-			errormsg = "FAILED TO RELOAD!";
-			break;
-		case 0:
-		default:
-			panic_flag = false;		
-			break;	
+	case 1:
+		errormsg = "FAILED TO GET NATIVE_FIRM TITLE";
+		break;
+	case 2:
+		errormsg = "UNSUPPORTED FIRMWARE!";
+		break;
+	case 3:
+		errormsg = "UDSPLOIT FAILED!";
+		break;
+	case 4:
+		errormsg = "KERNEL HOOK FAILED!";
+		break;
+	case -1:
+		errormsg = "PM INIT FAILED!";
+		break;
+	case -2:
+		errormsg = "FAILED TO ALLOCATE MEMORY!";
+		break;
+	case -3:
+		errormsg = "FAILED TO OPEN SAFEHAXPAYLOAD!";
+		break;
+	case -4:
+		errormsg = "SAFEHAXPAYLOAD! PAYLOAD TOO BIG!";
+		break;
+	case -8:
+		errormsg = "BUNDLED ARM9 PAYLOAD TOO BIG!";
+		break;
+	case -5:
+		errormsg = "ARM11 PAYLOAD TOO BIG!";
+		break;
+	case -6:
+		errormsg = "FAILED TO PATCH THE ARM11 KERNEL!";
+		break;
+	case -7:
+		errormsg = "FAILED TO RELOAD!";
+		break;
+	case 0:
+	default:
+		panic_flag = false;
+		break;
 	}
 
 	if (panic_flag) {
 		consoleSelect(&bottomScreen);
 		printf("\x1b[26;3H\x1b[31;1m [!] %s\x1b[28;3H Press [START] to exit", errormsg);
-		while (aptMainLoop()) { 
-			hidScanInput(); if (hidKeysDown() & KEY_START) { break; } 
+		while (aptMainLoop()) {
+			hidScanInput(); if (hidKeysDown() & KEY_START) { break; }
 			gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank();
 		}
-	} 
+	}
 	else { //fix framebuffer on exit
 		gfxSetScreenFormat(GFX_TOP, GSP_BGR8_OES);
 		gfxSetScreenFormat(GFX_BOTTOM, GSP_BGR8_OES);
@@ -116,7 +116,7 @@ exit:
 		gfxConfigScreen(GFX_BOTTOM, true);
 		gspWaitForVBlank();
 	}
-	
+
 	pmExit();
 	amExit();
 	romfsExit();

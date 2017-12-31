@@ -7,11 +7,11 @@
 // bypass gsp address checks
 static void gspSetTextureCopy(u32 in_pa, u32 out_pa, u32 size, u32 in_dim, u32 out_dim, u32 flags) {
 	u32 enable_reg = 0;
-	if (GSPGPU_ReadHWRegs(0x1EF00C18 - 0x1EB00000, &enable_reg, sizeof(enable_reg))) 		{ return; }
-	if (GSPGPU_WriteHWRegs(0x1EF00C00 - 0x1EB00000, (u32[]){in_pa >> 3, out_pa >> 3}, 0x8)) { return; }
-	if (GSPGPU_WriteHWRegs(0x1EF00C20 - 0x1EB00000, (u32[]){size, in_dim, out_dim}, 0xC)) 	{ return; }
-	if (GSPGPU_WriteHWRegs(0x1EF00C10 - 0x1EB00000, &flags, 4)) 							{ return; }
-	if (GSPGPU_WriteHWRegs(0x1EF00C18 - 0x1EB00000, (u32[]){enable_reg | 1}, 4)) 			{ return; }
+	if (GSPGPU_ReadHWRegs(0x1EF00C18 - 0x1EB00000, &enable_reg, sizeof(enable_reg))) { return; }
+	if (GSPGPU_WriteHWRegs(0x1EF00C00 - 0x1EB00000, (u32[]) { in_pa >> 3, out_pa >> 3 }, 0x8)) { return; }
+	if (GSPGPU_WriteHWRegs(0x1EF00C20 - 0x1EB00000, (u32[]) { size, in_dim, out_dim }, 0xC)) { return; }
+	if (GSPGPU_WriteHWRegs(0x1EF00C10 - 0x1EB00000, &flags, 4)) { return; }
+	if (GSPGPU_WriteHWRegs(0x1EF00C18 - 0x1EB00000, (u32[]) { enable_reg | 1 }, 4)) { return; }
 }
 
 static void initial_kernel_function(u32 garbage) {
@@ -36,28 +36,28 @@ Result hook_kernel() {
 	u32 svc_table_offset = 0;
 	u32 svc_ac_offset = 0;
 	{
-		const u32 pattern[] = {0xF96D0513, 0xE94D6F00};
-		for(int i = 0; i < wram_size; i += 4)
+		const u32 pattern[] = { 0xF96D0513, 0xE94D6F00 };
+		for (int i = 0; i < wram_size; i += 4)
 		{
 			const u32 cursor = i / 4;
 
-			if(wram_buffer[cursor] == pattern[0] && wram_buffer[cursor + 1] == pattern[1])
+			if (wram_buffer[cursor] == pattern[0] && wram_buffer[cursor + 1] == pattern[1])
 			{
 				svc_handler_offset = i;
-				for(i = svc_handler_offset; i < wram_size; i++)
+				for (i = svc_handler_offset; i < wram_size; i++)
 				{
 					const u32 val = wram_buffer[i / 4];
-					if((val & 0xfffff000) == 0xe28f8000)
+					if ((val & 0xfffff000) == 0xe28f8000)
 					{
 						svc_table_offset = i + (val & 0xfff) + 8;
 						break;
 					}
 				}
 
-				for(i = svc_handler_offset; i < wram_size; i++)
+				for (i = svc_handler_offset; i < wram_size; i++)
 				{
 					const u32 val = wram_buffer[i / 4];
-					if(val == 0x0AFFFFEA)
+					if (val == 0x0AFFFFEA)
 					{
 						svc_ac_offset = i;
 						break;
@@ -75,13 +75,13 @@ Result hook_kernel() {
 
 	u32 svc_0x30_offset = 0;
 	{
-		const u32 pattern[] = {0xE59F0000, 0xE12FFF1E, 0xF8C007F4};
+		const u32 pattern[] = { 0xE59F0000, 0xE12FFF1E, 0xF8C007F4 };
 		const u32 hint = wram_buffer[svc_table_offset / 4 + 0x30] & 0xfff;
-		for(int i = 0; i < wram_size; i += 4)
+		for (int i = 0; i < wram_size; i += 4)
 		{
 			const u32 cursor = i / 4;
 
-			if((i & 0xfff) == hint && wram_buffer[cursor] == pattern[0] && wram_buffer[cursor + 1] == pattern[1] && wram_buffer[cursor + 2] == pattern[2])
+			if ((i & 0xfff) == hint && wram_buffer[cursor] == pattern[0] && wram_buffer[cursor + 1] == pattern[1] && wram_buffer[cursor + 2] == pattern[2])
 			{
 				svc_0x30_offset = i;
 				break;
@@ -91,7 +91,7 @@ Result hook_kernel() {
 	}
 
 	ret = -202;
-	if(!svc_0x30_offset) goto sub_fail;
+	if (!svc_0x30_offset) goto sub_fail;
 
 	printf("patching kernel... ");
 
@@ -122,12 +122,12 @@ Result hook_kernel() {
 
 	// and finally we run that svc until it actually executes our code (should be first try, but with cache you never know i guess)
 	// this will also invalidate all icache which will allow us to use svcBackdoor
-	while(svcMiniBackdoor(initial_kernel_function));
+	while (svcMiniBackdoor(initial_kernel_function));
 
 	printf("done!\n");
 	ret = 0;
 
-	sub_fail:
+sub_fail:
 	linearFree(wram_buffer);
 
 	return ret;

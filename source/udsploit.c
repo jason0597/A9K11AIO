@@ -9,7 +9,7 @@ extern char* fake_heap_end;
 extern u32 __ctru_heap, __ctru_heap_size, __ctru_linear_heap, __ctru_linear_heap_size;
 
 void __attribute__((weak)) __system_allocateHeaps() {
-	u32 tmp=0;
+	u32 tmp = 0;
 
 	__ctru_heap_size = 8 * 1024 * 1024;
 
@@ -37,7 +37,7 @@ static Result UDS_InitializeWithVersion(Handle* handle, udsNodeInfo *nodeinfo, H
 	cmdbuf[14] = sharedmem_handle;
 
 	Result ret = 0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 	ret = cmdbuf[1];
 
 	return ret;
@@ -52,8 +52,8 @@ static Result UDS_Bind(Handle* handle, u32 BindNodeID, u32 input0, u8 data_chann
 	cmdbuf[3] = data_channel;
 	cmdbuf[4] = NetworkNodeID;
 
-	Result ret=0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	Result ret = 0;
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 	ret = cmdbuf[1];
 
 	return ret;
@@ -66,7 +66,7 @@ static Result UDS_Unbind(Handle* handle, u32 BindNodeID) {
 	cmdbuf[1] = BindNodeID;
 
 	Result ret = 0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 
 	return cmdbuf[1];
 }
@@ -77,7 +77,7 @@ static Result UDS_Shutdown(Handle* handle) {
 	cmdbuf[0] = 0x30000;
 
 	Result ret = 0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 
 	return cmdbuf[1];
 }
@@ -90,7 +90,7 @@ static Result NDM_EnterExclusiveState(Handle* handle, u32 state) {
 	cmdbuf[2] = 0x20;
 
 	Result ret = 0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 
 	return cmdbuf[1];
 }
@@ -102,7 +102,7 @@ static Result NDM_LeaveExclusiveState(Handle* handle) {
 	cmdbuf[1] = 0x20;
 
 	Result ret = 0;
-	if((ret = svcSendSyncRequest(*handle))) { return ret; }
+	if ((ret = svcSendSyncRequest(*handle))) { return ret; }
 
 	return cmdbuf[1];
 }
@@ -126,7 +126,7 @@ static Result allocHeapWithLa(u32 va, u32 size, u32* la) {
 
 	printf("allocate placeholder to cover all free memory\n");
 	if ((ret = svcControlMemory((u32*)&placeholder_addr, (u32)placeholder_addr, 0, placeholder_size, 3, 3))) { return ret; }
-	
+
 	printf("free linear block\n");
 	if ((ret = svcControlMemory((u32*)&linear_addr, (u32)linear_addr, 0, size, 1, 0))) { return ret; }
 
@@ -156,9 +156,8 @@ Result udsploit() {
 	printf("udsploit: srvGetServiceHandle\n");
 	if ((ret = srvGetServiceHandle(&ndmHandle, "ndm:u"))) { goto fail; }
 
-	
 	printf("udsploit: allocHeapWithPa\n");
-	if ((ret = allocHeapWithLa(sharedmem_va, sharedmem_size, &sharedmem_la))) { 
+	if ((ret = allocHeapWithLa(sharedmem_va, sharedmem_size, &sharedmem_la))) {
 		sharedmem_va = 0;
 		goto fail;
 	}
@@ -172,7 +171,7 @@ Result udsploit() {
 	if ((ret = NDM_EnterExclusiveState(&ndmHandle, 2))) { goto fail; } // EXCLUSIVE_STATE_LOCAL_COMMUNICATIONS
 
 	printf("udsploit: UDS_InitializeWithVersion\n");
-	udsNodeInfo nodeinfo = {0};
+	udsNodeInfo nodeinfo = { 0 };
 	if ((ret = UDS_InitializeWithVersion(&udsHandle, &nodeinfo, sharedmem_handle, sharedmem_size))) { goto fail; }
 
 	printf("udsploit: NDM_LeaveExclusiveState\n");
@@ -194,7 +193,7 @@ Result udsploit() {
 		for (int i = 0; i < 8; i++) {
 			printf("%08X %08X %08X %08X\n", buffer[i * 4 + 0], buffer[i * 4 + 1], buffer[i * 4 + 2], buffer[i * 4 + 3]);
 		}
-					
+
 		buffer[3] = 0x1EC40140 - 8;
 
 		GSPGPU_FlushDataCache(buffer, sharedmem_size);
@@ -205,13 +204,13 @@ Result udsploit() {
 	}
 
 	printf("udsploit: UDS_Unbind\n");
-	if ((ret = UDS_Unbind(&udsHandle, BindNodeID))) { goto fail; /* it's just a formality... */ } 
+	if ((ret = UDS_Unbind(&udsHandle, BindNodeID))) { goto fail; /* it's just a formality... */ }
 
 fail:
-	if(udsHandle) 			{ UDS_Shutdown(&udsHandle); }
-	if(ndmHandle) 			{ svcCloseHandle(ndmHandle); }
-	if(udsHandle) 			{ svcCloseHandle(udsHandle); }
-	if(sharedmem_handle) 	{ svcCloseHandle(sharedmem_handle); }
-	if(sharedmem_va) 		{ svcControlMemory((u32*)&sharedmem_va, (u32)sharedmem_va, 0, sharedmem_size, 0x1, 0); }
+	if (udsHandle) { UDS_Shutdown(&udsHandle); }
+	if (ndmHandle) { svcCloseHandle(ndmHandle); }
+	if (udsHandle) { svcCloseHandle(udsHandle); }
+	if (sharedmem_handle) { svcCloseHandle(sharedmem_handle); }
+	if (sharedmem_va) { svcControlMemory((u32*)&sharedmem_va, (u32)sharedmem_va, 0, sharedmem_size, 0x1, 0); }
 	return ret;
 }

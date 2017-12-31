@@ -5,6 +5,7 @@
 disable_interrupts:
     cpsid aif
     clrex
+	 bx lr
 
 .global flush_dcache
 .type flush_dcache, %function
