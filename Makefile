@@ -25,31 +25,15 @@ BUILD			:=	build
 SOURCES			:=	source
 INCLUDES		:=	include
 
-APP_ICON  		:=  $(CTRULIB)/default_icon.png
 APP_TITLE		:=	A9K11AIO
 APP_DESCRIPTION	:=	ARM9 code execution
-APP_AUTHOR		:=	jason0597
-
-#---------------------------------------------------------------------------------
-# check if bundled arm9.bin exists in arm9 folder
-#---------------------------------------------------------------------------------
-
-ARM9BIN_EXISTS_MAKEFILE := 0
-ifneq ("$(wildcard arm9/arm9.bin)","")
-ARM9BIN_EXISTS_MAKEFILE := 1
-endif
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
-CFLAGS	:=	-g -Wall -O2 -mword-relocations -fomit-frame-pointer -ffunction-sections $(ARCH) $(INCLUDE) -DARM11 -D_3DS 
-
-ifeq ($(ARM9BIN_EXISTS_MAKEFILE), 1)
-CFLAGS += -DARM9BIN_EXISTS
-endif
-
+CFLAGS	:=	-g -Wall -O2 -mword-relocations -fomit-frame-pointer -ffunction-sections $(ARCH) $(INCLUDE) -DARM11 -D_3DS
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS	:=  -lctru -lm
@@ -66,6 +50,16 @@ BIN2TEXT := ./bin2text/bin2text_linux
 else
 BIN2TEXT := ./bin2text/bin2text_mac 
 endif
+endif
+
+#---------------------------------------------------------------------------------
+# check if bundled arm9.bin exists in arm9 folder
+#---------------------------------------------------------------------------------
+
+ARM9BIN_EXISTS_MAKEFILE := 0
+ifneq ("$(wildcard arm9/arm9.bin)","")
+ARM9BIN_EXISTS_MAKEFILE = 1
+CFLAGS  += -DARM9BIN_EXISTS
 endif
 
 #---------------------------------------------------------------------------------
@@ -107,7 +101,6 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 all:
 	@cd payload && $(MAKE)
 	@mkdir -p $(BUILD) 
-	@echo $(ARM9BIN_EXISTS_MAKEFILE)
 	@$(BIN2TEXT) payload/arm11.bin payload/arm11bin.h 25 arm11_payload
 ifeq ($(ARM9BIN_EXISTS_MAKEFILE), 1)
 	@$(BIN2TEXT) arm9/arm9.bin arm9/arm9bin.h 25 arm9_payload
