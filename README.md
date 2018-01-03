@@ -5,4 +5,4 @@ This is a combination of [udsploit](https://github.com/smealum/udsploit) and [sa
 This program will try to load `safehaxpayload.bin` that's on SD root, but if it fails, it will fallback to a bundled ARM9 binary that has been extracted to a hex array and embedded in the source. Note that this is optional, and is not required for compiling.  
 Note that you don't *have* to use this as a `boot.3dsx`, it can be used as a normal `.3dsx` from [hbmenu](https://github.com/fincs/new-hbmenu)
 
-I don't want to take much credit because most of the work here was done by [Smealum](https://github.com/smealum/) and [TiniVi](https://github.com/TiniVi/). All I did was take the source code from those 2 repositories, clean it up/improve readability, add a couple of features, and release it.
+Also, normal users should not use this as I am an incompetent know-nothing
